@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FinDocAI — Workspace</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','system-ui','sans-serif']},colors:{brand:{50:'#EFF6FF',100:'#DBEAFE',500:'#3B82F6',600:'#2563EB',700:'#1E40AF',900:'#0c1d3d'},teal:{500:'#06B6D4',600:'#0891B2'},gold:{400:'#FBBF24',600:'#D97706'}}}}}
+</script>
+<style>
+  body{font-family:'Inter',system-ui,sans-serif}
+  .fade-in{animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .spin{animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+  ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+  .typing span{animation:blink 1.4s infinite both}.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased">
+
+<!-- ══ AUTH SCREEN ══ -->
+<div id="authScreen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-brand-900 via-[#0a1628] to-[#0c2340]">
+  <div class="w-full max-w-md fade-in">
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center gap-2 text-white font-extrabold text-2xl mb-2">
+        <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-brand-700 to-teal-500 grid place-items-center">🏦</span>
+        FinDocAI
+      </div>
+      <p class="text-white/50 text-sm">Financial Document Intelligence</p>
+    </div>
+    <div class="bg-white rounded-2xl shadow-2xl p-7">
+      <div class="flex gap-1 p-1 bg-slate-100 rounded-lg mb-6">
+        <button id="tabLogin" onclick="setAuthMode('login')" class="flex-1 py-2 rounded-md text-sm font-semibold transition bg-white shadow text-brand-700">Sign In</button>
+        <button id="tabRegister" onclick="setAuthMode('register')" class="flex-1 py-2 rounded-md text-sm font-semibold transition text-slate-500">Create Account</button>
+      </div>
+      <form id="authForm" onsubmit="submitAuth(event)" class="space-y-4">
+        <div id="nameField" class="hidden">
+          <label class="block text-xs font-semibold text-slate-500 mb-1">FULL NAME</label>
+          <input id="fullName" type="text" class="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm" placeholder="Jane Analyst"/>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">EMAIL</label>
+          <input id="email" type="email" required class="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm" placeholder="you@company.com"/>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">PASSWORD</label>
+          <input id="password" type="password" required class="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm" placeholder="••••••••"/>
+          <p id="pwHint" class="hidden text-[11px] text-slate-400 mt-1">8+ chars, with uppercase, lowercase & a digit.</p>
+        </div>
+        <div id="authError" class="hidden text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2"></div>
+        <button type="submit" id="authSubmit" class="w-full py-3 rounded-lg bg-brand-700 hover:bg-brand-600 text-white font-semibold text-sm transition flex items-center justify-center gap-2">
+          <span id="authBtnText">Sign In</span>
+        </button>
+      </form>
+      <p class="text-center text-xs text-slate-400 mt-5">Demo runs locally · Free tier: 10 docs / 100 queries</p>
+    </div>
+    <p class="text-center text-white/30 text-xs mt-6"><a href="/" class="hover:text-white/60">← Back to homepage</a></p>
+  </div>
+</div>
+
+<!-- ══ APP SHELL ══ -->
+<div id="appShell" class="hidden min-h-screen md:flex">
+  <!-- Sidebar (desktop) -->
+  <aside class="hidden md:flex md:flex-col w-60 bg-brand-900 text-white p-4 fixed inset-y-0">
+    <div class="flex items-center gap-2 font-extrabold text-lg mb-8 px-2">
+      <span class="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-700 to-teal-500 grid place-items-center text-base">🏦</span>
+      FinDocAI
+    </div>
+    <nav class="flex-1 space-y-1" id="sideNav"></nav>
+    <div class="border-t border-white/10 pt-3 mt-3">
+      <div class="px-2 mb-2">
+        <p id="sideUserName" class="text-sm font-semibold truncate"></p>
+        <p id="sideUserPlan" class="text-xs text-white/40"></p>
+      </div>
+      <button onclick="logout()" class="w-full text-left px-2 py-2 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition">Sign out</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 md:ml-60 pb-20 md:pb-0">
+    <!-- Top bar -->
+    <header class="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-slate-200 px-4 md:px-8 h-14 flex items-center justify-between">
+      <h1 id="viewTitle" class="font-bold text-slate-800">Dashboard</h1>
+      <div class="flex items-center gap-3">
+        <span id="modeBadge" class="hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full"></span>
+        <div class="md:hidden w-8 h-8 rounded-full bg-brand-100 text-brand-700 grid place-items-center text-sm font-bold" id="avatarMobile">U</div>
+      </div>
+    </header>
+
+    <div id="views" class="p-4 md:p-8 max-w-6xl mx-auto"></div>
+  </main>
+
+  <!-- Bottom tab nav (mobile) -->
+  <nav class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 grid grid-cols-5 h-16" id="bottomNav"></nav>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-50 hidden">
+  <div id="toastBody" class="px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium text-white"></div>
+</div>
+
+<script>
+/* ════════════════ API CLIENT ════════════════ */
+const API = '/api';
+let state = { token: localStorage.getItem('fdai_token'), refresh: localStorage.getItem('fdai_refresh'), user: null, view: 'dashboard', session: null };
+
+async function api(path, { method='GET', body=null, raw=false } = {}) {
+  const headers = {};
+  if (!raw) headers['Content-Type'] = 'application/json';
+  if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
+  const res = await fetch(API + path, { method, headers, body: raw ? body : (body ? JSON.stringify(body) : null) });
+  if (res.status === 401) { logout(); throw new Error('Session expired'); }
+  let data = null;
+  const ct = res.headers.get('content-type') || '';
+  if (ct.includes('application/json')) data = await res.json();
+  if (!res.ok) throw new Error((data && data.detail) || `Error ${res.status}`);
+  return data;
+}
+
+/* ════════════════ AUTH ════════════════ */
+let authMode = 'login';
+function setAuthMode(m){
+  authMode = m;
+  const login = m==='login';
+  document.getElementById('tabLogin').className = `flex-1 py-2 rounded-md text-sm font-semibold transition ${login?'bg-white shadow text-brand-700':'text-slate-500'}`;
+  document.getElementById('tabRegister').className = `flex-1 py-2 rounded-md text-sm font-semibold transition ${!login?'bg-white shadow text-brand-700':'text-slate-500'}`;
+  document.getElementById('nameField').classList.toggle('hidden', login);
+  document.getElementById('pwHint').classList.toggle('hidden', login);
+  document.getElementById('authBtnText').textContent = login?'Sign In':'Create Account';
+  hideAuthError();
+}
+function showAuthError(msg){ const e=document.getElementById('authError'); e.textContent=msg; e.classList.remove('hidden'); }
+function hideAuthError(){ document.getElementById('authError').classList.add('hidden'); }
+
+async function submitAuth(e){
+  e.preventDefault(); hideAuthError();
+  const email=document.getElementById('email').value.trim();
+  const password=document.getElementById('password').value;
+  const btn=document.getElementById('authSubmit');
+  btn.disabled=true; btn.classList.add('opacity-60');
+  try{
+    let data;
+    if(authMode==='register'){
+      const full_name=document.getElementById('fullName').value.trim()||'User';
+      data=await api('/auth/register',{method:'POST',body:{email,full_name,password}});
+    }else{
+      data=await api('/auth/login',{method:'POST',body:{email,password}});
+    }
+    state.token=data.access_token; state.refresh=data.refresh_token;
+    localStorage.setItem('fdai_token',state.token); localStorage.setItem('fdai_refresh',state.refresh);
+    await boot();
+  }catch(err){ showAuthError(err.message); }
+  finally{ btn.disabled=false; btn.classList.remove('opacity-60'); }
+}
+
+function logout(){
+  state.token=null; state.refresh=null; state.user=null;
+  localStorage.removeItem('fdai_token'); localStorage.removeItem('fdai_refresh');
+  document.getElementById('appShell').classList.add('hidden');
+  document.getElementById('authScreen').classList.remove('hidden');
+}
+
+/* ════════════════ NAV ════════════════ */
+const NAV = [
+  { id:'dashboard', label:'Dashboard', icon:'📊' },
+  { id:'documents', label:'Documents', icon:'📄' },
+  { id:'chat',      label:'Chat',      icon:'💬' },
+  { id:'analytics', label:'Analytics', icon:'📈' },
+  { id:'settings',  label:'Settings',  icon:'⚙️' },
+];
+
+function renderNav(){
+  document.getElementById('sideNav').innerHTML = NAV.map(n=>`
+    <button onclick="go('${n.id}')" data-nav="${n.id}" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${state.view===n.id?'bg-white/10 text-white':'text-white/55 hover:text-white hover:bg-white/5'}">
+      <span>${n.icon}</span> ${n.label}
+    </button>`).join('');
+  document.getElementById('bottomNav').innerHTML = NAV.map(n=>`
+    <button onclick="go('${n.id}')" class="flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition ${state.view===n.id?'text-brand-700':'text-slate-400'}">
+      <span class="text-lg">${n.icon}</span>${n.label}
+    </button>`).join('');
+}
+
+function go(view){ state.view=view; renderNav(); render(); }
+
+/* ════════════════ VIEWS ════════════════ */
+const titles={dashboard:'Dashboard',documents:'Documents',chat:'RAG Chat',analytics:'Analytics',settings:'Settings'};
+async function render(){
+  document.getElementById('viewTitle').textContent=titles[state.view];
+  const el=document.getElementById('views');
+  el.innerHTML=`<div class="flex justify-center py-20"><div class="w-8 h-8 border-3 border-brand-200 border-t-brand-600 rounded-full spin"></div></div>`;
+  try{
+    if(state.view==='dashboard') await viewDashboard(el);
+    else if(state.view==='documents') await viewDocuments(el);
+    else if(state.view==='chat') await viewChat(el);
+    else if(state.view==='analytics') await viewAnalytics(el);
+    else if(state.view==='settings') await viewSettings(el);
+  }catch(err){ el.innerHTML=`<div class="text-red-600 bg-red-50 rounded-lg p-4">${err.message}</div>`; }
+}
+
+/* ── Dashboard ── */
+async function viewDashboard(el){
+  const a=await api('/analytics/overview');
+  const pct=(u,l)=> l?Math.min(100,Math.round(u/l*100)):0;
+  el.innerHTML=`<div class="fade-in space-y-6">
+    <div>
+      <h2 class="text-xl font-extrabold text-slate-800">Welcome back, ${state.user.full_name.split(' ')[0]} 👋</h2>
+      <p class="text-slate-500 text-sm">Here's your document intelligence overview.</p>
+    </div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      ${statCard('📄','Documents',a.documents.total,'#EFF6FF','#1E40AF')}
+      ${statCard('✅','Ready',a.documents.ready,'#F0FDF4','#059669')}
+      ${statCard('🧩','Chunks Indexed',a.documents.chunks,'#FFFBEB','#D97706')}
+      ${statCard('💬','Chat Messages',a.chat.messages,'#CFFAFE','#0891B2')}
+    </div>
+    <div class="grid md:grid-cols-2 gap-4">
+      ${usageCard('Documents this month',a.usage.documents.used,a.usage.documents.limit,pct(a.usage.documents.used,a.usage.documents.limit))}
+      ${usageCard('Queries this month',a.usage.queries.used,a.usage.queries.limit,pct(a.usage.queries.used,a.usage.queries.limit))}
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <h3 class="font-bold text-slate-800 mb-1">Quick start</h3>
+      <p class="text-sm text-slate-500 mb-4">Get from upload to insight in two steps.</p>
+      <div class="flex flex-wrap gap-3">
+        <button onclick="go('documents')" class="px-4 py-2.5 rounded-lg bg-brand-700 hover:bg-brand-600 text-white text-sm font-semibold transition">📤 Upload a document</button>
+        <button onclick="go('chat')" class="px-4 py-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-sm font-semibold transition">💬 Ask a question</button>
+      </div>
+    </div>
+  </div>`;
+}
+function statCard(icon,label,val,bg,fg){
+  return `<div class="bg-white rounded-xl border border-slate-200 p-4">
+    <div class="w-9 h-9 rounded-lg grid place-items-center mb-3" style="background:${bg}"><span>${icon}</span></div>
+    <div class="text-2xl font-extrabold" style="color:${fg}">${val}</div>
+    <div class="text-xs text-slate-400 font-medium mt-0.5">${label}</div></div>`;
+}
+function usageCard(label,used,limit,pct){
+  const unlimited=limit===null;
+  return `<div class="bg-white rounded-xl border border-slate-200 p-5">
+    <div class="flex justify-between items-baseline mb-2">
+      <span class="text-sm font-semibold text-slate-700">${label}</span>
+      <span class="text-sm font-bold ${pct>=90&&!unlimited?'text-red-600':'text-slate-800'}">${used}${unlimited?'':' / '+limit}</span>
+    </div>
+    ${unlimited?'<div class="text-xs text-emerald-600 font-semibold">Unlimited (Pro)</div>':
+      `<div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full rounded-full transition-all" style="width:${pct}%;background:${pct>=90?'#dc2626':'linear-gradient(90deg,#1E40AF,#06B6D4)'}"></div></div>`}
+  </div>`;
+}
+
+/* ── Documents ── */
+async function viewDocuments(el){
+  const docs=await api('/documents');
+  el.innerHTML=`<div class="fade-in space-y-5">
+    <div class="bg-white rounded-xl border-2 border-dashed border-slate-200 p-6 text-center hover:border-brand-400 transition" id="dropZone">
+      <input type="file" id="fileInput" multiple accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.md" class="hidden"/>
+      <div class="text-3xl mb-2">📤</div>
+      <p class="font-semibold text-slate-700">Drag & drop files here</p>
+      <p class="text-xs text-slate-400 mb-3">PDF, PNG, JPG, TXT, CSV — multiple files supported</p>
+      <button onclick="document.getElementById('fileInput').click()" class="px-4 py-2 rounded-lg bg-brand-700 hover:bg-brand-600 text-white text-sm font-semibold transition">Choose files</button>
+      <div id="uploadStatus" class="mt-3 text-sm"></div>
+    </div>
+    <div>
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-bold text-slate-800">Your documents <span class="text-slate-400 font-normal">(${docs.length})</span></h3>
+        <button onclick="render()" class="text-xs text-brand-600 font-semibold hover:underline">↻ Refresh</button>
+      </div>
+      <div class="space-y-2">${docs.length?docs.map(docRow).join(''):'<p class="text-sm text-slate-400 py-8 text-center">No documents yet. Upload one above to get started.</p>'}</div>
+    </div>
+  </div>`;
+  setupUpload(docs);
+}
+function statusBadge(s){
+  const map={pending:['bg-slate-100 text-slate-600','Pending'],processing:['bg-amber-100 text-amber-700','Processing'],ready:['bg-emerald-100 text-emerald-700','Ready'],failed:['bg-red-100 text-red-700','Failed']};
+  const [cls,txt]=map[s]||map.pending;
+  const sp = s==='processing'?'<span class="inline-block w-2 h-2 border border-amber-500 border-t-transparent rounded-full spin mr-1"></span>':'';
+  return `<span class="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full ${cls}">${sp}${txt}</span>`;
+}
+function docRow(d){
+  const kb=(d.size_bytes/1024).toFixed(0);
+  return `<div class="bg-white rounded-xl border border-slate-200 p-3.5 flex items-center gap-3">
+    <div class="w-10 h-10 rounded-lg bg-brand-50 grid place-items-center text-lg shrink-0">📄</div>
+    <div class="flex-1 min-w-0">
+      <p class="font-semibold text-sm text-slate-800 truncate">${esc(d.filename)}</p>
+      <p class="text-xs text-slate-400">${kb} KB · ${d.pages} pages · ${d.chunk_count} chunks ${d.error?'· <span class="text-red-500">'+esc(d.error)+'</span>':''}</p>
+    </div>
+    ${statusBadge(d.status)}
+    <button onclick="deleteDoc('${d.id}')" class="text-slate-300 hover:text-red-500 transition p-1" title="Delete">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>
+    </button>
+  </div>`;
+}
+function setupUpload(existing){
+  const input=document.getElementById('fileInput'), zone=document.getElementById('dropZone');
+  input.addEventListener('change',()=>uploadFiles(input.files));
+  ['dragover','dragenter'].forEach(e=>zone.addEventListener(e,ev=>{ev.preventDefault();zone.classList.add('border-brand-500','bg-brand-50')}));
+  ['dragleave','drop'].forEach(e=>zone.addEventListener(e,ev=>{ev.preventDefault();zone.classList.remove('border-brand-500','bg-brand-50')}));
+  zone.addEventListener('drop',ev=>uploadFiles(ev.dataTransfer.files));
+}
+async function uploadFiles(files){
+  if(!files.length) return;
+  const st=document.getElementById('uploadStatus');
+  st.innerHTML=`<span class="text-brand-600">Uploading ${files.length} file(s)…</span>`;
+  const fd=new FormData();
+  [...files].forEach(f=>fd.append('files',f));
+  try{
+    await api('/documents/upload',{method:'POST',body:fd,raw:true});
+    st.innerHTML=`<span class="text-emerald-600">✓ Uploaded. Processing in background…</span>`;
+    toast('Upload complete — processing started','emerald');
+    setTimeout(render,1200);
+    setTimeout(()=>{ if(state.view==='documents') render(); },3500);
+  }catch(err){ st.innerHTML=`<span class="text-red-600">${err.message}</span>`; }
+}
+async function deleteDoc(id){
+  await api('/documents/'+id,{method:'DELETE'});
+  toast('Document deleted','slate'); render();
+}
+
+/* ── Chat ── */
+async function viewChat(el){
+  const sessions=await api('/chat/sessions');
+  if(!state.session && sessions.length) state.session=sessions[0].id;
+  el.innerHTML=`<div class="fade-in grid md:grid-cols-[220px_1fr] gap-4 h-[calc(100vh-9rem)]">
+    <div class="hidden md:flex flex-col bg-white rounded-xl border border-slate-200 p-3">
+      <button onclick="newChat()" class="w-full mb-3 px-3 py-2 rounded-lg bg-brand-700 hover:bg-brand-600 text-white text-sm font-semibold transition">+ New chat</button>
+      <div class="flex-1 overflow-y-auto space-y-1">${sessions.map(s=>`
+        <button onclick="openSession('${s.id}')" class="w-full text-left px-3 py-2 rounded-lg text-sm truncate transition ${state.session===s.id?'bg-brand-50 text-brand-700 font-semibold':'text-slate-600 hover:bg-slate-50'}">${esc(s.title)}</button>`).join('')||'<p class="text-xs text-slate-400 px-2">No chats yet</p>'}</div>
+    </div>
+    <div class="flex flex-col bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+      <div class="border-t border-slate-200 p-3">
+        <div class="flex gap-2">
+          <input id="chatInput" onkeydown="if(event.key==='Enter')sendChat()" placeholder="Ask about your documents…" class="flex-1 px-4 py-2.5 rounded-lg border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none text-sm"/>
+          <button onclick="sendChat()" id="chatSend" class="px-4 py-2.5 rounded-lg bg-brand-700 hover:bg-brand-600 text-white text-sm font-semibold transition">Send</button>
+        </div>
+        <p class="md:hidden text-center mt-2"><button onclick="newChat()" class="text-xs text-brand-600 font-semibold">+ New chat</button></p>
+      </div>
+    </div>
+  </div>`;
+  await loadMessages();
+}
+async function loadMessages(){
+  const box=document.getElementById('chatMessages');
+  if(!box) return;
+  if(!state.session){ box.innerHTML=emptyChat(); return; }
+  const msgs=await api(`/chat/sessions/${state.session}/messages`);
+  box.innerHTML = msgs.length? msgs.map(bubble).join('') : emptyChat();
+  box.scrollTop=box.scrollHeight;
+}
+function emptyChat(){
+  return `<div class="h-full grid place-items-center text-center px-6">
+    <div><div class="text-4xl mb-3">💬</div>
+    <p class="font-semibold text-slate-700">Ask anything about your documents</p>
+    <p class="text-sm text-slate-400 mt-1">e.g. "What is the total amount due?" or "Summarize the loan terms."</p></div></div>`;
+}
+function bubble(m){
+  if(m.role==='user'){
+    return `<div class="flex justify-end"><div class="max-w-[80%] bg-brand-700 text-white rounded-2xl rounded-br-sm px-4 py-2.5 text-sm">${esc(m.content)}</div></div>`;
+  }
+  const sources=(m.sources||[]).map((s,i)=>`
+    <div class="text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 mt-1.5">
+      <span class="font-semibold text-brand-700">📄 ${esc(s.document)} · p.${s.page}</span>
+      <p class="text-slate-500 mt-0.5">${esc(s.snippet)}</p>
+    </div>`).join('');
+  const conf = m.confidence!=null?`<span class="text-[10px] text-slate-400 ml-2">confidence ${(m.confidence*100).toFixed(0)}%</span>`:'';
+  return `<div class="flex justify-start"><div class="max-w-[85%]">
+    <div class="bg-slate-100 rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm text-slate-800 whitespace-pre-wrap">${mdLite(m.content)}</div>
+    ${sources?`<details class="mt-1.5"><summary class="text-xs text-brand-600 font-semibold cursor-pointer">📎 ${(m.sources||[]).length} source(s)${conf}</summary>${sources}</details>`:conf}
+  </div></div>`;
+}
+async function newChat(){
+  const s=await api('/chat/sessions',{method:'POST'});
+  state.session=s.id; render();
+}
+function openSession(id){ state.session=id; render(); }
+async function sendChat(){
+  const input=document.getElementById('chatInput'); const q=input.value.trim();
+  if(!q) return;
+  input.value=''; input.disabled=true;
+  const box=document.getElementById('chatMessages');
+  if(box.querySelector('.grid')) box.innerHTML='';
+  box.insertAdjacentHTML('beforeend',`<div class="flex justify-end"><div class="max-w-[80%] bg-brand-700 text-white rounded-2xl rounded-br-sm px-4 py-2.5 text-sm">${esc(q)}</div></div>`);
+  box.insertAdjacentHTML('beforeend',`<div id="typing" class="flex justify-start"><div class="bg-slate-100 rounded-2xl rounded-bl-sm px-4 py-3"><div class="typing flex gap-1"><span class="w-2 h-2 bg-slate-400 rounded-full"></span><span class="w-2 h-2 bg-slate-400 rounded-full"></span><span class="w-2 h-2 bg-slate-400 rounded-full"></span></div></div></div>`);
+  box.scrollTop=box.scrollHeight;
+  try{
+    const r=await api('/chat/ask',{method:'POST',body:{question:q,session_id:state.session}});
+    state.session=r.session_id;
+    await loadMessages();
+  }catch(err){
+    document.getElementById('typing')?.remove();
+    box.insertAdjacentHTML('beforeend',`<div class="flex justify-start"><div class="bg-red-50 text-red-600 border border-red-100 rounded-xl px-4 py-2.5 text-sm">${err.message}</div></div>`);
+  }finally{ input.disabled=false; input.focus(); }
+}
+
+/* ── Analytics ── */
+async function viewAnalytics(el){
+  const [a,act]=await Promise.all([api('/analytics/overview'),api('/analytics/activity?days=14')]);
+  const max=Math.max(1,...act.series.map(s=>s.queries));
+  el.innerHTML=`<div class="fade-in space-y-6">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      ${statCard('📄','Total Docs',a.documents.total,'#EFF6FF','#1E40AF')}
+      ${statCard('🧩','Chunks',a.documents.chunks,'#FFFBEB','#D97706')}
+      ${statCard('💬','Sessions',a.chat.sessions,'#CFFAFE','#0891B2')}
+      ${statCard('✉️','Messages',a.chat.messages,'#F0FDF4','#059669')}
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <h3 class="font-bold text-slate-800 mb-1">Query activity</h3>
+      <p class="text-sm text-slate-400 mb-5">Last 14 days</p>
+      <div class="flex items-end gap-1.5 h-40">${act.series.map(s=>`
+        <div class="flex-1 flex flex-col items-center gap-1 group">
+          <div class="w-full rounded-t transition-all hover:opacity-80" style="height:${s.queries/max*100}%;min-height:3px;background:linear-gradient(180deg,#06B6D4,#1E40AF)" title="${s.queries} queries"></div>
+          <span class="text-[9px] text-slate-400">${s.date.slice(8)}</span>
+        </div>`).join('')}</div>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <h3 class="font-bold text-slate-800 mb-4">Plan usage — ${a.plan.toUpperCase()}</h3>
+      <div class="grid md:grid-cols-2 gap-4">
+        ${usageCard('Documents',a.usage.documents.used,a.usage.documents.limit,a.usage.documents.limit?Math.round(a.usage.documents.used/a.usage.documents.limit*100):0)}
+        ${usageCard('Queries',a.usage.queries.used,a.usage.queries.limit,a.usage.queries.limit?Math.round(a.usage.queries.used/a.usage.queries.limit*100):0)}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── Settings ── */
+async function viewSettings(el){
+  const keys=await api('/auth/api-keys');
+  el.innerHTML=`<div class="fade-in space-y-6 max-w-2xl">
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <h3 class="font-bold text-slate-800 mb-4">Account</h3>
+      <div class="space-y-3 text-sm">
+        <div class="flex justify-between"><span class="text-slate-500">Name</span><span class="font-semibold">${esc(state.user.full_name)}</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Email</span><span class="font-semibold">${esc(state.user.email)}</span></div>
+        <div class="flex justify-between items-center"><span class="text-slate-500">Plan</span><span class="font-semibold px-2.5 py-0.5 rounded-full text-xs ${state.user.plan==='free'?'bg-slate-100 text-slate-600':'bg-gold-400/20 text-gold-600'}">${state.user.plan.toUpperCase()}</span></div>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div><h3 class="font-bold text-slate-800">API Keys</h3><p class="text-xs text-slate-400">For third-party integrations (X-API-Key header)</p></div>
+        <button onclick="createKey()" class="px-3 py-2 rounded-lg bg-brand-700 hover:bg-brand-600 text-white text-sm font-semibold transition">+ New key</button>
+      </div>
+      <div id="keyList" class="space-y-2">${keys.length?keys.map(keyRow).join(''):'<p class="text-sm text-slate-400">No API keys yet.</p>'}</div>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-6">
+      <h3 class="font-bold text-slate-800 mb-2">Compliance</h3>
+      <p class="text-sm text-slate-500 mb-4">Export your immutable audit trail (SOX/GDPR ready).</p>
+      <button onclick="exportAudit()" class="px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-sm font-semibold transition">⬇ Export audit log (CSV)</button>
+    </div>
+    <button onclick="logout()" class="md:hidden w-full py-3 rounded-lg border border-red-200 text-red-600 font-semibold text-sm">Sign out</button>
+  </div>`;
+}
+function keyRow(k){
+  return `<div class="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2.5">
+    <div><p class="text-sm font-semibold text-slate-700">${esc(k.name)}</p><p class="text-xs text-slate-400 font-mono">${esc(k.prefix)}••••••• ${k.revoked?'· <span class="text-red-500">revoked</span>':''}</p></div>
+    ${k.revoked?'':`<button onclick="revokeKey('${k.id}')" class="text-xs text-red-500 font-semibold hover:underline">Revoke</button>`}
+  </div>`;
+}
+async function createKey(){
+  const r=await api('/auth/api-keys',{method:'POST',body:{name:'default'}});
+  alert('Your new API key (shown once — copy it now):\n\n'+r.key);
+  render();
+}
+async function revokeKey(id){ await api('/auth/api-keys/'+id,{method:'DELETE'}); toast('Key revoked','slate'); render(); }
+async function exportAudit(){
+  const res=await fetch(API+'/audit/logs/export',{headers:{Authorization:`Bearer ${state.token}`}});
+  const blob=await res.blob(); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='audit_logs.csv'; a.click(); URL.revokeObjectURL(url);
+  toast('Audit log exported','emerald');
+}
+
+/* ════════════════ HELPERS ════════════════ */
+function esc(s){ return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function mdLite(s){ return esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>').replace(/^&gt; (.+)$/gm,'<span class="block border-l-2 border-brand-300 pl-2 text-slate-600">$1</span>').replace(/\n/g,'<br>'); }
+let toastTimer;
+function toast(msg,color='brand'){
+  const map={brand:'bg-brand-700',emerald:'bg-emerald-600',slate:'bg-slate-700',red:'bg-red-600'};
+  const t=document.getElementById('toast'),b=document.getElementById('toastBody');
+  b.className=`px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium text-white ${map[color]}`; b.textContent=msg;
+  t.classList.remove('hidden'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.add('hidden'),2500);
+}
+
+/* ════════════════ BOOT ════════════════ */
+async function boot(){
+  try{
+    const [user,health]=await Promise.all([api('/auth/me'),api('/health')]);
+    state.user=user;
+    document.getElementById('authScreen').classList.add('hidden');
+    document.getElementById('appShell').classList.remove('hidden');
+    document.getElementById('sideUserName').textContent=user.full_name;
+    document.getElementById('sideUserPlan').textContent=user.plan.toUpperCase()+' plan';
+    document.getElementById('avatarMobile').textContent=(user.full_name[0]||'U').toUpperCase();
+    const badge=document.getElementById('modeBadge');
+    if(health.llm_enabled){ badge.textContent='⚡ Gemini'; badge.className='hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700'; }
+    else { badge.textContent='🔧 Local TF-IDF mode'; badge.className='hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700'; }
+    renderNav(); render();
+  }catch(err){ logout(); }
+}
+
+(function init(){
+  setAuthMode('login');
+  if(state.token) boot();
+})();
+</script>
+</body>
+</html>

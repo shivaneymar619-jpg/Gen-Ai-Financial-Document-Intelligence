@@ -1,12 +1,23 @@
-streamlit>=1.32.0
-langchain>=0.2.0
-langchain-openai>=0.1.3
-langchain-community>=0.2.0
-langchain-text-splitters>=0.2.0
+# ── Full-stack platform (backend/) ──────────────────────────────
+fastapi>=0.110
+uvicorn[standard]>=0.29
+sqlalchemy>=2.0
+pydantic>=2.6
+pydantic-settings>=2.2
+python-multipart>=0.0.9
+python-jose[cryptography]>=3.3
+bcrypt>=4.1
+email-validator>=2.1
+python-dotenv>=1.0.1
+
+# ── Document processing + RAG ───────────────────────────────────
 pdfplumber>=0.11.0
 pytesseract>=0.3.10
-chromadb>=0.4.24
 Pillow>=10.2.0
-python-dotenv>=1.0.1
-tiktoken>=0.6.0
-pypdf>=4.1.0
+numpy>=1.26
+langchain-core>=0.2.0
+langchain-text-splitters>=0.2.0
+langchain-google-genai>=1.0.0    # only needed when GEMINI_API_KEY is set
+
+# ── Original Streamlit prototype (app.py) ───────────────────────
+streamlit>=1.32.0
