@@ -52,7 +52,7 @@ def ask(body: schemas.AskIn, request: Request,
     if body.session_id:
         session = _owned_session(db, body.session_id, user)
     else:
-        session = models.ChatSession(owner_id=user.id, title=body.question[:48])
+        session = models.ChatSession(owner_id=user.id, title="New chat")
         db.add(session)
         db.commit()
         db.refresh(session)

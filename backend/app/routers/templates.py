@@ -46,7 +46,10 @@ def create_template(body: schemas.TemplateIn, user: models.User = Depends(get_cu
 @router.post("/{template_id}/use", response_model=schemas.TemplateOut)
 def use_template(template_id: str, user: models.User = Depends(get_current_user),
                  db: Session = Depends(get_db)):
-    t = db.query(models.Template).filter(models.Template.id == template_id).first()
+    t = db.query(models.Template).filter(
+        models.Template.id == template_id,
+        or_(models.Template.owner_id == user.id, models.Template.is_public == True),  # noqa: E712
+    ).first()
     if not t:
         raise HTTPException(status_code=404, detail="Template not found.")
     t.use_count += 1
@@ -64,4 +67,6 @@ def seed_defaults(user: models.User = Depends(get_current_user), db: Session = D
     for spec in STARTER_TEMPLATES:
         db.add(models.Template(owner_id=user.id, is_public=False, **spec))
     db.commit()
-    return list_templates(user, db)
+    return db.query(models.Template).filter(
+        models.Template.owner_id == user.id
+    ).order_by(models.Template.use_count.desc()).all()

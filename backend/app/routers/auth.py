@@ -63,8 +63,8 @@ def refresh(body: schemas.RefreshIn, db: Session = Depends(get_db)):
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(status_code=401, detail="Invalid refresh token.")
     user = db.query(models.User).filter(models.User.id == payload["sub"]).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found.")
+    if not user or user.deleted_at is not None or not user.is_active:
+        raise HTTPException(status_code=401, detail="User not found or account disabled.")
     return schemas.TokenOut(
         access_token=create_token(user.id, "access"),
         refresh_token=create_token(user.id, "refresh"),

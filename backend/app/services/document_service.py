@@ -64,7 +64,8 @@ def process_document(db: Session, document_id: str):
     except Exception as e:
         db.rollback()
         doc = db.query(models.Document).filter(models.Document.id == document_id).first()
-        if doc:
-            doc.status = "failed"
-            doc.error = str(e)[:500]
-            db.commit()
+        if doc is None:
+            return  # document deleted between start and failure — nothing to update
+        doc.status = "failed"
+        doc.error = str(e)[:500]
+        db.commit()

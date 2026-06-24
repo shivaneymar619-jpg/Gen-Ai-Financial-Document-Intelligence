@@ -119,7 +119,8 @@ def retrieve(db: Session, owner_id: str, query: str, k: int = None) -> list[tupl
         return []
 
     qvec = embed_query(query)
-    if qvec is not None and all(c.embedding for c in chunks):
+    chunks_with_embeddings = [c for c in chunks if c.embedding]
+    if qvec is not None and len(chunks_with_embeddings) == len(chunks):
         q = np.array(qvec, dtype=float)
         scored = [(c, _cosine(q, np.array(c.embedding, dtype=float))) for c in chunks]
     else:

@@ -34,8 +34,8 @@ def get_current_user(
 
     if user is None and token:
         payload = decode_token(token)
-        if payload and payload.get("type") == "access":
-            user = db.query(models.User).filter(models.User.id == payload.get("sub")).first()
+        if payload and payload.get("type") == "access" and payload.get("sub") is not None:
+            user = db.query(models.User).filter(models.User.id == payload["sub"]).first()
 
     if user is None or user.deleted_at is not None or not user.is_active:
         raise HTTPException(

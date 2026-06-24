@@ -25,26 +25,26 @@ def create_team(body: schemas.TeamIn, request: Request,
 
 @router.get("", response_model=list[schemas.TeamOut])
 def list_teams(user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    team_ids = [m.team_id for m in
-                db.query(models.TeamMember).filter(models.TeamMember.user_id == user.id).all()]
-    if not team_ids:
-        return []
-    return db.query(models.Team).filter(
-        models.Team.id.in_(team_ids), models.Team.deleted_at.is_(None)
-    ).all()
+    return (
+        db.query(models.Team)
+        .join(models.TeamMember, models.TeamMember.team_id == models.Team.id)
+        .filter(models.TeamMember.user_id == user.id, models.Team.deleted_at.is_(None))
+        .all()
+    )
 
 
 @router.get("/{team_id}/members")
 def list_members(team_id: str, user: models.User = Depends(get_current_user),
                  db: Session = Depends(get_db)):
     _require_member(db, team_id, user)
-    members = db.query(models.TeamMember).filter(models.TeamMember.team_id == team_id).all()
-    out = []
-    for m in members:
-        u = db.query(models.User).filter(models.User.id == m.user_id).first()
-        if u:
-            out.append({"user_id": u.id, "email": u.email, "full_name": u.full_name, "role": m.role})
-    return out
+    rows = (
+        db.query(models.User, models.TeamMember.role)
+        .join(models.TeamMember, models.TeamMember.user_id == models.User.id)
+        .filter(models.TeamMember.team_id == team_id)
+        .all()
+    )
+    return [{"user_id": u.id, "email": u.email, "full_name": u.full_name, "role": role}
+            for u, role in rows]
 
 
 @router.post("/{team_id}/members", status_code=201)

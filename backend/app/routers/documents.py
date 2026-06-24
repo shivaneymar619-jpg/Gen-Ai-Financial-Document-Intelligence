@@ -40,18 +40,21 @@ async def upload(
     """Batch upload. Each file is saved, recorded, and queued for async processing."""
     created: list[models.Document] = []
     for f in files:
+        if not f.filename:
+            raise HTTPException(status_code=422, detail="Each file must have a filename.")
         ext = os.path.splitext(f.filename)[1].lower()
         if ext not in ALLOWED:
             raise HTTPException(status_code=415, detail=f"Unsupported file type: {ext}")
-
-        # Freemium gate, counted per document
-        enforce_and_increment(db, user, "documents_uploaded", settings.FREE_DOC_LIMIT)
 
         data = await f.read()
         stored_name = f"{uuid.uuid4().hex}{ext}"
         path = settings.STORAGE_DIR / stored_name
         with open(path, "wb") as out:
             out.write(data)
+
+        # Freemium gate — checked after the file is safely on disk so a quota
+        # error doesn't consume the slot for a write that never happened.
+        enforce_and_increment(db, user, "documents_uploaded", settings.FREE_DOC_LIMIT)
 
         doc = models.Document(
             owner_id=user.id, filename=f.filename, content_type=f.content_type,
